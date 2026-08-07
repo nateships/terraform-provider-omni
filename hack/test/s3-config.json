@@ -1,0 +1,20 @@
+{
+  "identities": [
+    {
+      "name": "tf-acc",
+      "credentials": [
+        {
+          "accessKey": "tfaccesskey",
+          "secretKey": "tfsecretkey"
+        }
+      ],
+      "actions": [
+        "Admin",
+        "Read",
+        "Write",
+        "List",
+        "Tagging"
+      ]
+    }
+  ]
+}

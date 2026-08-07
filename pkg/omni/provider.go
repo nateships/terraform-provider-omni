@@ -145,6 +145,7 @@ func (p *OmniProvider) Resources(_ context.Context) []func() resource.Resource {
 		NewMachineExtensionsResource,
 		NewKubernetesManifestResource,
 		NewKubernetesHealthCheckResource,
+		NewEtcdBackupS3ConfigResource,
 	}
 }
 

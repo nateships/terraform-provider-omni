@@ -27,6 +27,33 @@ services:
     networks:
       - omni-test
 
+  # S3-compatible storage for the etcd backup tests. SeaweedFS has no environment-based credential
+  # configuration for its S3 gateway, so the throwaway identity is mounted as a config file, and the
+  # test buckets are created by run.sh once the gateway is up (there is no bucket auto-creation
+  # either, and Omni validates a backup configuration by listing the bucket).
+  s3:
+    image: chrislusf/seaweedfs:4.41
+    container_name: s3
+    command:
+      - server
+      - -s3
+      - -s3.config=/etc/seaweedfs/s3.json
+      - -dir=/data
+      # Bind on all interfaces so the healthcheck below can reach the gateway over loopback.
+      - -ip.bind=0.0.0.0
+    volumes:
+      - ./s3-config.json:/etc/seaweedfs/s3.json:ro
+    ports:
+      - "${S3_HOST_PORT:-8333}:8333"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8333/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - omni-test
+
   omni:
     image: ghcr.io/siderolabs/omni:${OMNI_VERSION:-latest}
     restart: on-failure
@@ -49,6 +76,8 @@ services:
       - omni-test
     depends_on:
       dex:
+        condition: service_healthy
+      s3:
         condition: service_healthy
 
 volumes:

@@ -39,6 +39,18 @@ func errToDiag(diags *diag.Diagnostics, summary string, err error) {
 	diags.AddError(summary, err.Error())
 }
 
+// optionalString maps a server-side string onto an Optional (non-Computed) string attribute.
+//
+// The server reports the zero value for fields the user left unset, so the empty string is mapped
+// back to null to avoid a permanent ""-vs-null diff against the configuration.
+func optionalString(value string) types.String {
+	if value == "" {
+		return types.StringNull()
+	}
+
+	return types.StringValue(value)
+}
+
 // reconcileDuration returns a string representation of serverDuration that round-trips cleanly
 // against the value already in state.
 //

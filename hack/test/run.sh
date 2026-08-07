@@ -26,6 +26,18 @@ COMPOSE=(docker compose -p "${PROJECT}" -f "${COMPOSE_FILE}")
 # Host port to publish Omni's API on (override if 8099 is already taken locally).
 export OMNI_HOST_PORT="${OMNI_HOST_PORT:-8099}"
 
+# Host port to publish the SeaweedFS S3 gateway on (only used for debugging from the host; Omni
+# reaches it over the compose network).
+export S3_HOST_PORT="${S3_HOST_PORT:-8333}"
+
+# S3 settings the etcd backup acceptance test configures Omni with. The credentials must match the
+# identity in hack/test/s3-config.json.
+export OMNI_TEST_S3_ENDPOINT="${OMNI_TEST_S3_ENDPOINT:-http://s3:8333}"
+export OMNI_TEST_S3_REGION="${OMNI_TEST_S3_REGION:-us-east-1}"
+export OMNI_TEST_S3_BUCKET="${OMNI_TEST_S3_BUCKET:-tf-acc-etcd-backups}"
+export OMNI_TEST_S3_ACCESS_KEY_ID="${OMNI_TEST_S3_ACCESS_KEY_ID:-tfaccesskey}"
+export OMNI_TEST_S3_SECRET_ACCESS_KEY="${OMNI_TEST_S3_SECRET_ACCESS_KEY:-tfsecretkey}"
+
 # No external machines join in the machine-less suite, so advertise SideroLink on loopback. Render
 # the Omni config from its template (see hack/test/omni-config.yaml.tmpl).
 export OMNI_SIDEROLINK_ADVERTISED_HOST="${OMNI_SIDEROLINK_ADVERTISED_HOST:-127.0.0.1}"
@@ -37,7 +49,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-echo "==> Starting Omni and mock OIDC"
+echo "==> Starting Omni, mock OIDC and S3"
 # Remove any leftover state from a previous run so Omni bootstraps fresh (initial users + key).
 "${COMPOSE[@]}" down -t 5 -v --remove-orphans >/dev/null 2>&1 || true
 "${COMPOSE[@]}" up -d
@@ -47,6 +59,20 @@ if [[ -z "${OMNI_CID}" ]]; then
   echo "failed to determine Omni container id" >&2
   exit 1
 fi
+
+# SeaweedFS does not create buckets on demand, and Omni validates a backup configuration by listing
+# the bucket, so both the initial and the post-update bucket must exist up front.
+echo "==> Creating S3 buckets"
+s3_deadline=$(( $(date +%s) + 120 ))
+until "${COMPOSE[@]}" exec -T s3 sh -c \
+  "printf 's3.bucket.create -name %s\ns3.bucket.create -name %s-updated\n' '${OMNI_TEST_S3_BUCKET}' '${OMNI_TEST_S3_BUCKET}' | weed shell -master=localhost:9333" >/dev/null 2>&1; do
+  if [[ $(date +%s) -gt ${s3_deadline} ]]; then
+    echo "S3 buckets could not be created in time" >&2
+    "${COMPOSE[@]}" logs --no-color s3 | tail -50 >&2 || true
+    exit 1
+  fi
+  sleep 2
+done
 
 echo "==> Waiting for the initial service-account key"
 deadline=$(( $(date +%s) + 180 ))

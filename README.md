@@ -62,12 +62,25 @@ throwaway PGP key (`file://` private-key-source, no Vault) and self-signed certs
 `hack/test/certs/`; the tests connect with `insecure_skip_tls_verify = true` and authenticate with
 the service-account key (PGP-signed), so no interactive OIDC login happens.
 
-If port `8099` is already in use locally, override it; the Omni image tag is also configurable:
+The stack also runs a SeaweedFS S3 gateway for the etcd backup tests, with a throwaway identity from
+`hack/test/s3-config.json`. Omni validates a backup configuration by listing the target bucket, and
+SeaweedFS neither creates buckets on demand nor reads credentials from the environment, so `run.sh`
+creates the test buckets after the gateway reports healthy and exports the `OMNI_TEST_S3_*` variables
+the tests read.
+
+If port `8099` is already in use locally, override it; the S3 host port (`8333`), the Omni image tag
+and the S3 settings are also configurable:
 
 ```sh
 OMNI_HOST_PORT=18099 make test-integration
 OMNI_VERSION=v1.9.0 OMNI_HOST_PORT=18099 make test-integration
+S3_HOST_PORT=18333 make test-integration
 ```
+
+To point the etcd backup tests at S3 storage of your own instead of the bundled gateway, override
+`OMNI_TEST_S3_ENDPOINT`, `OMNI_TEST_S3_REGION`, `OMNI_TEST_S3_BUCKET`, `OMNI_TEST_S3_ACCESS_KEY_ID`
+and `OMNI_TEST_S3_SECRET_ACCESS_KEY`. Both `$OMNI_TEST_S3_BUCKET` and `$OMNI_TEST_S3_BUCKET-updated`
+must exist and be reachable from the Omni container.
 
 The acceptance tests also run
 
