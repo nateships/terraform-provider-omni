@@ -68,8 +68,11 @@ services:
       - omni-out:/_out
     ports:
       - "${OMNI_HOST_PORT:-8099}:8099"
-      - "8090:8090"
-      - "50180:50180/udp"
+      # Only published so a machine can reach the machine API and SideroLink from the host; the
+      # machine-less suite never uses them. They are overridable because a developer running Omni
+      # locally already holds these ports.
+      - "${OMNI_MACHINE_API_HOST_PORT:-8090}:8090"
+      - "${OMNI_SIDEROLINK_HOST_PORT:-50180}:50180/udp"
     command:
       - --config-path=/etc/omni/config.yaml
     networks:

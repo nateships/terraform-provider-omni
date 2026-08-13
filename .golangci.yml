@@ -22,6 +22,7 @@ linters:
   default: all
   disable:
     - exhaustruct
+    - exhaustruct_v5 # replaced exhaustruct in golangci-lint v2.13
     - err113
     - forbidigo
     - funcorder
@@ -49,6 +50,7 @@ linters:
     - musttag # seems to be broken - goes into imported libraries and reports issues there
     - nolintlint # gives false positives - disable until https://github.com/golangci/golangci-lint/issues/3228 is resolved
     - wsl # replaced by wsl_v5
+    - gomodguard # replaced by gomodguard_v2
     - noinlineerr
     - embeddedstructfieldcheck # fighting in many places with fieldalignment
   # all available settings of specific linters
@@ -78,7 +80,6 @@ linters:
       min-complexity: 20
     godot:
       scope: declarations
-    gomodguard: { }
     govet:
       enable-all: true
     lll:

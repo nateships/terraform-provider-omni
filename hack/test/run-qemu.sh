@@ -10,7 +10,7 @@
 # Mirrors the approach used by Omni's own QEMU integration tests (hack/test/common.sh): a kernel-args
 # schematic is POSTed to the Image Factory and the resulting ISO is booted via `talosctl cluster
 # create ... --skip-injecting-config`, so the machines come up in maintenance mode and join Omni over
-# SideroLink. No omnictl is required.
+# SideroLink. The join token is read with omnictl, which is extracted from the Omni image.
 #
 # Requirements: KVM, qemu (assumed present in CI), crane, jq, curl, docker
 # (the QEMU provisioner manages bridges/taps/iptables). See
@@ -51,15 +51,11 @@ QEMU_TALOS_VERSION="${QEMU_TALOS_VERSION:-1.13.5}"
 QEMU_MEMORY="${QEMU_MEMORY:-3072}"
 QEMU_CPUS="${QEMU_CPUS:-3}"
 FACTORY_API_URL="${FACTORY_API_URL:-https://factory.talos.dev}"
+export OMNI_VERSION="${OMNI_VERSION:-latest}"
 
 ARTIFACTS="$(mktemp -d)"
 TALOSCTL="${ARTIFACTS}/talosctl"
 OMNICTL="${ARTIFACTS}/omnictl"
-
-echo "==> Downloading omnictl"
-
-curl -Lo ${OMNICTL} $(curl https://api.github.com/repos/siderolabs/omni/releases/latest  |  jq -r '.assets[] | select(.name | contains ("omnictl-linux-amd64")) | .browser_download_url')
-chmod +x ${OMNICTL}
 
 export OMNI_HOST_PORT="${OMNI_HOST_PORT:-8099}"
 # Advertise SideroLink on the QEMU bridge gateway so the VMs can reach Omni (the machine-less suite
@@ -92,6 +88,13 @@ trap cleanup EXIT INT TERM
 echo "==> Downloading talosctl"
 crane export ghcr.io/siderolabs/talosctl:latest - | tar x -C "${ARTIFACTS}" talosctl
 chmod +x "${TALOSCTL}"
+
+# omnictl ships inside the Omni image itself, so the CLI always matches the Omni version under test.
+echo "==> Extracting omnictl from the Omni image"
+crane export "ghcr.io/siderolabs/omni:${OMNI_VERSION}" - \
+  | tar x -C "${ARTIFACTS}" --strip-components=1 omnictl/omnictl-linux-amd64
+mv "${ARTIFACTS}/omnictl-linux-amd64" "${OMNICTL}"
+chmod +x "${OMNICTL}"
 
 echo "==> Starting Omni and mock OIDC"
 # Render the Omni config from its template (see hack/test/omni-config.yaml.tmpl).

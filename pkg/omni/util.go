@@ -5,6 +5,7 @@
 package omni
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -49,6 +50,45 @@ func optionalString(value string) types.String {
 	}
 
 	return types.StringValue(value)
+}
+
+// optionalSet maps a server-side slice onto an Optional (non-Computed) set attribute.
+//
+// Like optionalString, an empty value maps back to null: the server reports nothing for a field the
+// user left unset, and an empty set in state would diff forever against a null configuration.
+func optionalSet(ctx context.Context, values []string, diags *diag.Diagnostics) types.Set {
+	if len(values) == 0 {
+		return types.SetNull(types.StringType)
+	}
+
+	set, d := types.SetValueFrom(ctx, types.StringType, values)
+	diags.Append(d...)
+
+	return set
+}
+
+// optionalList maps a server-side slice onto an Optional (non-Computed) list attribute.
+func optionalList(ctx context.Context, values []string, diags *diag.Diagnostics) types.List {
+	if len(values) == 0 {
+		return types.ListNull(types.StringType)
+	}
+
+	list, d := types.ListValueFrom(ctx, types.StringType, values)
+	diags.Append(d...)
+
+	return list
+}
+
+// optionalMap maps a server-side map onto an Optional (non-Computed) map attribute.
+func optionalMap(ctx context.Context, values map[string]string, diags *diag.Diagnostics) types.Map {
+	if len(values) == 0 {
+		return types.MapNull(types.StringType)
+	}
+
+	m, d := types.MapValueFrom(ctx, types.StringType, values)
+	diags.Append(d...)
+
+	return m
 }
 
 // reconcileDuration returns a string representation of serverDuration that round-trips cleanly

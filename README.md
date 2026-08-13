@@ -11,7 +11,22 @@ uses the [terraform-plugin-framework](https://github.com/hashicorp/terraform-plu
 
 ## Status
 
-Early skeleton. The first supported object is users (`omni_user`).
+Early, but no longer a skeleton. Supported resources:
+
+| Resource | Manages |
+| --- | --- |
+| `omni_user` | Omni users |
+| `omni_cluster` | Clusters |
+| `omni_machine_set` | Machine sets within a cluster |
+| `omni_machine_set_node` | Machine membership of a machine set |
+| `omni_config_patch` | Talos configuration patches |
+| `omni_machine_extensions` | Talos system extensions per cluster / machine set / machine |
+| `omni_kubernetes_manifest` | Kubernetes manifests applied to a cluster |
+| `omni_kubernetes_healthcheck` | Kubernetes health check configuration |
+| `omni_etcd_backup_s3_config` | Instance-wide S3 storage for etcd backups |
+| `omni_installation_media_preset` | Saved installation media presets (`omnictl media preset`) |
+
+Plus the `omni_user` data source. See [`docs/`](docs/) for the generated reference.
 
 ## Provider configuration
 
