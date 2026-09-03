@@ -14,6 +14,7 @@ require (
 	github.com/siderolabs/gen v0.8.7
 	github.com/siderolabs/go-api-signature v0.3.13
 	github.com/siderolabs/omni/client v1.10.0-beta.0.0.20260824083911-b024ef98acd8
+	github.com/stretchr/testify v1.12.1
 	google.golang.org/protobuf v1.36.12
 )
 

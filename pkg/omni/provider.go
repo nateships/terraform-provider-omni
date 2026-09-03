@@ -141,6 +141,7 @@ func (p *OmniProvider) Resources(_ context.Context) []func() resource.Resource {
 		NewClusterResource,
 		NewMachineSetResource,
 		NewMachineSetNodeResource,
+		NewMachineClassResource,
 		NewConfigPatchResource,
 		NewMachineExtensionsResource,
 		NewKubernetesManifestResource,

@@ -6,7 +6,6 @@ package omni
 
 import (
 	"context"
-	"errors"
 
 	"github.com/cosi-project/runtime/pkg/safe"
 	cosistate "github.com/cosi-project/runtime/pkg/state"
@@ -30,10 +29,6 @@ var (
 	_ resource.ResourceWithImportState      = (*machineExtensionsResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*machineExtensionsResource)(nil)
 )
-
-// errExtensionsPlanInvalid aborts a state update when the plan cannot be converted; the real cause
-// is carried in the response diagnostics.
-var errExtensionsPlanInvalid = errors.New("invalid extensions plan")
 
 // machineExtensionsResourceModel maps the omni_machine_extensions resource schema.
 type machineExtensionsResourceModel struct {
@@ -264,23 +259,13 @@ func (r *machineExtensionsResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	_, err := safe.StateUpdateWithConflicts(ctx, r.data.state, omni.NewExtensionsConfiguration(plan.ID.ValueString()).Metadata(),
-		func(config *omni.ExtensionsConfiguration) error {
+	updateWithDiags(ctx, r.data.state, omni.NewExtensionsConfiguration(plan.ID.ValueString()).Metadata(), &resp.Diagnostics,
+		"Failed to update Omni extensions configuration",
+		func(config *omni.ExtensionsConfiguration) {
 			r.applyExtensions(ctx, plan, config, &resp.Diagnostics)
-
-			if resp.Diagnostics.HasError() {
-				return errExtensionsPlanInvalid
-			}
-
-			return nil
 		})
-	if err != nil {
-		if resp.Diagnostics.HasError() {
-			return
-		}
 
-		errToDiag(&resp.Diagnostics, "Failed to update Omni extensions configuration", err)
-
+	if resp.Diagnostics.HasError() {
 		return
 	}
 

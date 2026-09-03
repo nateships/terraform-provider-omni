@@ -6,12 +6,40 @@ package omni
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	cosiresource "github.com/cosi-project/runtime/pkg/resource"
+	"github.com/cosi-project/runtime/pkg/safe"
+	cosistate "github.com/cosi-project/runtime/pkg/state"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// errPlanInvalid aborts a state update when the plan cannot be converted; the real cause is carried
+// in the diagnostics the apply callback wrote.
+var errPlanInvalid = errors.New("invalid plan")
+
+// updateWithDiags wraps safe.StateUpdateWithConflicts for resources whose apply step reports
+// failures through diagnostics instead of an error return. An apply failure aborts the update and
+// keeps the diagnostics it produced; any other error is reported under summary.
+func updateWithDiags[T cosiresource.Resource](
+	ctx context.Context, st cosistate.State, ptr cosiresource.Pointer, diags *diag.Diagnostics, summary string, apply func(T),
+) {
+	_, err := safe.StateUpdateWithConflicts(ctx, st, ptr, func(res T) error {
+		apply(res)
+
+		if diags.HasError() {
+			return errPlanInvalid
+		}
+
+		return nil
+	})
+	if err != nil && !errors.Is(err, errPlanInvalid) {
+		errToDiag(diags, summary, err)
+	}
+}
 
 // providerDataFromResource extracts the shared providerData set by the provider's Configure method.
 //
